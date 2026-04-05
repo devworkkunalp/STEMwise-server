@@ -21,7 +21,12 @@ builder.Services.AddScoped<IUniversityService, UniversityService>();
 builder.Services.AddScoped<ISalaryService, SalaryService>();
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
