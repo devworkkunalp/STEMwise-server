@@ -1,0 +1,12 @@
+bin/
+obj/
+*.user
+*.suo
+*.sln.doccache
+.vs/
+appsettings.Development.json
+*.utf8.txt
+*.txt
+build_output.txt
+migration_output.txt
+supabase_schema.sql
