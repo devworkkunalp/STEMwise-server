@@ -3,6 +3,7 @@ using STEMwise.Infrastructure.Data;
 using STEMwise.Application.Interfaces;
 using STEMwise.Infrastructure.ExternalAPIs;
 using STEMwise.Infrastructure.Services;
+using STEMwise.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,7 @@ builder.Services.AddHttpClient<IBlsOewsClient, BlsOewsClient>();
 builder.Services.AddScoped<ICountryService, CountryService>();
 builder.Services.AddScoped<IUniversityService, UniversityService>();
 builder.Services.AddScoped<ISalaryService, SalaryService>();
+builder.Services.AddScoped<ICalculationService, CalculationService>();
 
 // Add services to the container.
 builder.Services.AddControllers()
