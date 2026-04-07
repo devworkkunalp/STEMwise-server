@@ -1,6 +1,8 @@
 using System;
+using STEMwise.Domain.Enums;
 
 namespace STEMwise.Domain.Entities;
+
 
 public class UserUniversity : BaseEntity
 {
@@ -12,5 +14,7 @@ public class UserUniversity : BaseEntity
     public Program? Program { get; set; }
     public int? CustomTuition { get; set; }
     public int? CustomLivingCost { get; set; }
+    public EnrollmentStatus Status { get; set; } = EnrollmentStatus.Interested;
     public bool IsPrimary { get; set; } = false;
 }
+

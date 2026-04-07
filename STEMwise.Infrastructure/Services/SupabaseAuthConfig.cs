@@ -1,6 +1,11 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using System.Threading.Tasks;
+
+
 
 namespace STEMwise.Infrastructure.Services;
 
@@ -12,13 +17,8 @@ public static class SupabaseAuthConfig
 {
     public static void AddSupabaseAuth(this IServiceCollection services, IConfiguration configuration)
     {
-        var jwtSecret = configuration["Supabase:JwtSecret"];
-        if (string.IsNullOrEmpty(jwtSecret))
-        {
-            // Fallback for local development if not in appsettings
-            jwtSecret = "your-supabase-jwt-secret-here"; 
-        }
-
+        var supabaseUrl = configuration["Supabase:Url"];
+        
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -26,25 +26,67 @@ public static class SupabaseAuthConfig
         })
         .AddJwtBearer(options =>
         {
-            options.Events = new JwtBearerEvents
-            {
-                OnMessageReceived = context =>
-                {
-                    // Supabase sends token in Authorization: Bearer <token>
-                    return Task.CompletedTask;
-                }
-            };
+            options.Authority = $"{supabaseUrl}/auth/v1";
+            options.RequireHttpsMetadata = true;
+            
+            var jwtSecret = configuration["Supabase:JwtSecret"];
+            var key = Convert.FromBase64String(jwtSecret);
 
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+                IssuerSigningKey = new SymmetricSecurityKey(key),
                 ValidateIssuer = true,
-                ValidIssuer = $"{configuration["Supabase:Url"]}/auth/v1",
+                ValidIssuers = new[] 
+                { 
+                    $"{supabaseUrl}/auth/v1",
+                    supabaseUrl 
+                },
                 ValidateAudience = true,
                 ValidAudience = "authenticated",
-                ValidateLifetime = true
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
             };
+
+            options.Events = new JwtBearerEvents
+            {
+                OnChallenge = context =>
+                {
+                    Console.WriteLine($"[AUTH CHALLENGE] 401 Unauthorized for {context.Request.Path}");
+                    return Task.CompletedTask;
+                },
+                OnTokenValidated = context =>
+                {
+                    Console.WriteLine("[AUTH SUCCESS] Token validated successfully.");
+                    return Task.CompletedTask;
+                },
+                OnAuthenticationFailed = context =>
+                {
+                    Console.WriteLine($"[AUTH FAILURE] Path: {context.Request.Path}");
+                    
+                    if (context.Exception != null)
+                    {
+                        Console.WriteLine($"[AUTH ERROR] {context.Exception.Message}");
+                        
+                        if (context.Exception is SecurityTokenInvalidSignatureException)
+                            Console.WriteLine("[AUTH DETAIL] Signature mismatch. Check if Supabase uses ES256 vs HS256.");
+                        else if (context.Exception is SecurityTokenInvalidIssuerException)
+                            Console.WriteLine("[AUTH DETAIL] Issuer mismatch. Expected vs Received.");
+                        
+                        if (context.Exception.InnerException != null)
+                            Console.WriteLine($"[AUTH INNER ERROR] {context.Exception.InnerException.Message}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("[AUTH ERROR] Unknown authentication failure (Exception was null).");
+                    }
+                        
+                    return Task.CompletedTask;
+                }
+            };
+
         });
     }
 }
+
+

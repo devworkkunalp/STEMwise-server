@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using STEMwise.Application.DTOs;
 using STEMwise.Application.Interfaces;
 using STEMwise.Domain.Entities;
+using STEMwise.Domain.Enums;
 
 namespace STEMwise.API.Controllers;
 
@@ -40,7 +41,7 @@ public class ProfileController : ControllerBase
         var profile = await _profileService.GetProfileByUserIdAsync(userId);
         if (profile == null)
         {
-            return NotFound();
+            return NoContent();
         }
 
         return Ok(profile);
@@ -63,3 +64,7 @@ public class ProfileController : ControllerBase
         return Ok(profile);
     }
 }
+
+
+
+

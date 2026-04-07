@@ -58,4 +58,15 @@ public class SalaryController : ControllerBase
         var stats = await _salaryService.GetH1BStatisticsAsync();
         return Ok(stats);
     }
+
+    /// <summary>
+    /// Retrieves top H-1B sponsors for a given field or metro area.
+    /// </summary>
+    [HttpGet("h1b-employers")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<Employer>>> GetTopEmployers([FromQuery] string? metro = null)
+    {
+        var employers = await _salaryService.GetTopSponsorsAsync(metro);
+        return Ok(employers);
+    }
 }

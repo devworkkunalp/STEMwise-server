@@ -25,6 +25,7 @@ public class ProfileService : IProfileService
             .Include(p => p.UserUniversities)
             .Include(p => p.LoanConfigs)
             .Include(p => p.VisaConfigs)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(p => p.UserId == userId);
     }
 

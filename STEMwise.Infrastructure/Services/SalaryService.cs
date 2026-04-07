@@ -37,4 +37,21 @@ public class SalaryService : ISalaryService
             .OrderByDescending(h => h.FiscalYear)
             .ToListAsync();
     }
+
+    public async Task<IEnumerable<Employer>> GetTopSponsorsAsync(string? metroArea = null)
+    {
+        var query = _context.Employers.AsQueryable();
+
+        if (!string.IsNullOrEmpty(metroArea))
+        {
+            // Simple string matching in the list for mock/prototype
+            // In a real DB, top_cities would be a JSONB or similar
+            query = query.Where(e => e.TopCities.Any(c => c.Contains(metroArea)));
+        }
+
+        return await query
+            .OrderByDescending(e => e.H1BFilingsTotal)
+            .Take(5)
+            .ToListAsync();
+    }
 }

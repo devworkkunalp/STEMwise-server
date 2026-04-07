@@ -26,7 +26,20 @@ builder.Services.AddScoped<ICalculationService, CalculationService>();
 // Add Supabase Auth
 builder.Services.AddSupabaseAuth(builder.Configuration);
 
+// Add CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 // Add services to the container.
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -39,7 +52,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "STEMwise API", Version = "v1" });
-    
+
     // Add Security Definition for Bearer token
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
@@ -66,16 +79,35 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+// Global Traffic Logger
+app.Use(async (context, next) =>
+{
+    Console.WriteLine($"[TRAFFIC] {context.Request.Method} {context.Request.Path}");
+    await next();
+});
+
 // Configure the HTTP request pipeline.
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+
+
 
 
 app.MapControllers();
