@@ -113,20 +113,27 @@ public class CalculationService : ICalculationService
 
     public Task<LoanResult> CalculateLoanAmortizationAsync(LoanRequest request)
     {
-        // P * (r(1+r)^n) / ((1+r)^n - 1)
         double principal = (double)request.Principal;
-        double monthlyRate = (double)request.AnnualInterestRate / 12.0 / 100.0;
-        int totalMonths = request.TenureYears * 12;
+        double annualRate = (double)request.AnnualInterestRate / 100.0;
+        double monthlyRate = annualRate / 12.0;
 
-        double emi = principal * (monthlyRate * Math.Pow(1 + monthlyRate, totalMonths)) / (Math.Pow(1 + monthlyRate, totalMonths) - 1);
+        // 1. Initial interest calculation during grace period (Simple interest)
+        // Assume interest is accrued but not compounded during grace period
+        double gracePeriodInterest = principal * (annualRate * (request.GracePeriodMonths / 12.0));
         
-        decimal totalPayable = (decimal)(emi * totalMonths);
+        // 2. Amortization after grace period
+        int repaymentMonths = request.TenureYears * 12;
+        
+        double emi = principal * (monthlyRate * Math.Pow(1 + monthlyRate, repaymentMonths)) / (Math.Pow(1 + monthlyRate, repaymentMonths) - 1);
+        
+        decimal totalAmortized = (decimal)(emi * repaymentMonths);
+        decimal totalInterest = (decimal)gracePeriodInterest + (totalAmortized - request.Principal);
 
         return Task.FromResult(new LoanResult
         {
             MonthlyEMI = Math.Round((decimal)emi, 2),
-            TotalAmountPayable = Math.Round(totalPayable, 2),
-            TotalInterestPayable = Math.Round(totalPayable - request.Principal, 2)
+            TotalAmountPayable = Math.Round((decimal)principal + totalInterest, 2),
+            TotalInterestPayable = Math.Round(totalInterest, 2)
         });
     }
 
