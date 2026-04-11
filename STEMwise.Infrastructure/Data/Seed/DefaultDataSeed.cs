@@ -41,4 +41,54 @@ public static class DefaultDataSeed
             }
         );
     }
+
+    public static void SeedEmployers(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Employer>().HasData(
+            new Employer
+            {
+                Id = Guid.NewGuid(),
+                Name = "Google",
+                H1BFilingsTotal = 12500,
+                AvgSponsoredSalary = 165000,
+                SponsorScore = 98,
+                TopCities = new List<string> { "Mountain View", "San Francisco", "Austin", "New York" },
+                PrimaryStemFields = new List<string> { "Software Engineering", "Data Science", "AI" },
+                CreatedAt = DateTime.UtcNow
+            },
+            new Employer
+            {
+                Id = Guid.NewGuid(),
+                Name = "Amazon",
+                H1BFilingsTotal = 35000,
+                AvgSponsoredSalary = 155000,
+                SponsorScore = 95,
+                TopCities = new List<string> { "Seattle", "Austin", "Arlington", "San Francisco" },
+                PrimaryStemFields = new List<string> { "Cloud Computing", "Software Engineering", "Product Management" },
+                CreatedAt = DateTime.UtcNow
+            },
+            new Employer
+            {
+                Id = Guid.NewGuid(),
+                Name = "Meta",
+                H1BFilingsTotal = 8500,
+                AvgSponsoredSalary = 175000,
+                SponsorScore = 92,
+                TopCities = new List<string> { "Menlo Park", "San Francisco", "Seattle", "Austin" },
+                PrimaryStemFields = new List<string> { "Product Engineering", "Data Engineering" },
+                CreatedAt = DateTime.UtcNow
+            },
+            new Employer
+            {
+                Id = Guid.NewGuid(),
+                Name = "Tesla",
+                H1BFilingsTotal = 2100,
+                AvgSponsoredSalary = 145000,
+                SponsorScore = 88,
+                TopCities = new List<string> { "Austin", "Fremont", "Palo Alto" },
+                PrimaryStemFields = new List<string> { "Mechanical Engineering", "Software Engineering", "AI" },
+                CreatedAt = DateTime.UtcNow
+            }
+        );
+    }
 }

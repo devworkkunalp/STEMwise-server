@@ -61,7 +61,17 @@ public class VisaResult
     public int TotalAttempts { get; set; }
     public string RiskLevel { get; set; } = string.Empty;
     public int WageLevel { get; set; } // I-IV categorization
+    public List<WageLevelData> ProbabilityMatrix { get; set; } = new();
     public string OptimizationTip { get; set; } = string.Empty;
+}
+
+public class WageLevelData
+{
+    public string Level { get; set; } = string.Empty;
+    public decimal Rate { get; set; }
+    public string Label { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool IsUserLevel { get; set; }
 }
 
 public class LoanRequest

@@ -80,8 +80,9 @@ public class EnrichmentService : IEnrichmentService
         {
             var visaRequest = new VisaRequest 
             { 
-                BaseSelectionRate = 0.25m, // Current historical average
-                IsStem = request.ProgramName.Contains("Computer") || request.ProgramName.Contains("Science") || request.ProgramName.Contains("AI")
+                City = request.TargetCity,
+                IsStem = request.ProgramName.Contains("Computer") || request.ProgramName.Contains("Science") || request.ProgramName.Contains("AI"),
+                Salary = result.LaborMarket?.BenchmarkSalary ?? 115000 // Use labor market data if available
             };
             var visaResult = await _calculationService.CalculateVisaProbabilityAsync(visaRequest);
             

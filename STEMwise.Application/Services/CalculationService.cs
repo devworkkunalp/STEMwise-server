@@ -109,63 +109,80 @@ public class CalculationService : ICalculationService
         return result;
     }
 
-    public Task<VisaResult> CalculateVisaProbabilityAsync(VisaRequest request)
+    public async Task<VisaResult> CalculateVisaProbabilityAsync(VisaRequest request)
     {
-        int attempts = request.IsStem ? 3 : 1;
-        
-        // 1. Determine Wage Level (Simplified Feb 2026 Model)
-        // High Tier: SF, New York, Seattle, San Jose
-        // Med Tier: Austin, Chicago, Dallas, Boston
-        string city = request.City?.ToLower() ?? "";
-        bool isHighTier = city.Contains("san francisco") || city.Contains("new york") || city.Contains("seattle") || city.Contains("san jose");
-        bool isMedTier = city.Contains("austin") || city.Contains("chicago") || city.Contains("dallas") || city.Contains("boston");
+        // 1. Determine Wage Level based on City Tiers (Feb 2026 Forecast)
+        var highTierCities = new[] { "San Francisco", "San Jose", "New York", "Seattle", "Palo Alto" };
+        var medTierCities = new[] { "Austin", "Chicago", "Dallas", "Boston", "Atlanta", "Los Angeles" };
 
-        int level = 1;
-        if (isHighTier) {
-            if (request.Salary >= 165000) level = 4;
-            else if (request.Salary >= 135000) level = 3;
-            else if (request.Salary >= 105000) level = 2;
-        } else if (isMedTier) {
-            if (request.Salary >= 140000) level = 4;
-            else if (request.Salary >= 115000) level = 3;
-            else if (request.Salary >= 90000) level = 2;
-        } else {
-            if (request.Salary >= 120000) level = 4;
-            else if (request.Salary >= 100000) level = 3;
-            else if (request.Salary >= 75000) level = 2;
+        int wageLevel = 1;
+        if (highTierCities.Any(c => request.City.Contains(c, StringComparison.OrdinalIgnoreCase)))
+        {
+            if (request.Salary >= 155000) wageLevel = 4;
+            else if (request.Salary >= 125000) wageLevel = 3;
+            else if (request.Salary >= 95000) wageLevel = 2;
+        }
+        else if (medTierCities.Any(c => request.City.Contains(c, StringComparison.OrdinalIgnoreCase)))
+        {
+            if (request.Salary >= 135000) wageLevel = 4;
+            else if (request.Salary >= 105000) wageLevel = 3;
+            else if (request.Salary >= 75000) wageLevel = 2;
+        }
+        else
+        {
+            if (request.Salary >= 125000) wageLevel = 4;
+            else if (request.Salary >= 95000) wageLevel = 3;
+            else if (request.Salary >= 65000) wageLevel = 2;
         }
 
-        // 2. Base Selection Rates per Level (Feb 2026 Forecasts)
-        double baseRate = level switch {
-            4 => 0.85,
-            3 => 0.58,
-            2 => 0.32,
-            _ => 0.12
+        // 2. Map Probabilities (Feb 2026 Model)
+        var levels = new Dictionary<int, decimal>
+        {
+            { 1, 0.15m },
+            { 2, 0.48m },
+            { 3, 0.61m },
+            { 4, 0.78m }
         };
 
-        // 3. Cumulative Probability across attempts
-        double singleFailureRate = 1.0 - baseRate;
-        double cumulativeFailure = Math.Pow(singleFailureRate, attempts);
-        decimal successProb = (decimal)(1.0 - cumulativeFailure);
+        decimal baseRate = levels.GetValueOrDefault(wageLevel, 0.15m);
+        int attempts = request.IsStem ? 3 : 1;
+        decimal cumulativeProb = 1 - (decimal)Math.Pow((double)(1 - baseRate), attempts);
 
-        string risk = "High";
-        if (successProb > 0.75m) risk = "Low";
-        else if (successProb > 0.45m) risk = "Medium";
-
-        // 4. Optimization Tip
-        string tip = level < 3 && isHighTier 
-            ? $"Relocating to a Tier 2 city (e.g., Austin) with your ${request.Salary:N0} salary would likely push you to Level III, increasing your selection odds to 58% per attempt."
-            : level < 2 ? "Targeting a role with a higher base salary or moving to a lower COL city is recommended to escape Level I lottery risk."
-            : "Your profile is competitive. Focus on top sponsorship-ready employers.";
-
-        return Task.FromResult(new VisaResult
+        // 3. Generate Probability Matrix for Frontend
+        var matrix = new List<WageLevelData>
         {
-            CumulativeSuccessProbability = Math.Round(successProb, 4),
+            new WageLevelData { Level = "Level I", Rate = 15, Label = "Entry Level", Description = "Lowest selection probability. High wage-based risk.", IsUserLevel = wageLevel == 1 },
+            new WageLevelData { Level = "Level II", Rate = 48, Label = "Qualified", Description = "Standard selection rate for most new grads in Med/High COL cities.", IsUserLevel = wageLevel == 2 },
+            new WageLevelData { Level = "Level III", Rate = 61, Label = "Experienced", Description = "Significantly higher selection odds via wage-based selection.", IsUserLevel = wageLevel == 3 },
+            new WageLevelData { Level = "Level IV", Rate = 78, Label = "Fully Competent", Description = "Highest priority. Near certain selection in current climate.", IsUserLevel = wageLevel == 4 }
+        };
+
+        // 4. Determine Risk Level & Optimization Tip
+        string riskLevel = cumulativeProb > 0.85m ? "Low" : (cumulativeProb > 0.5m ? "Medium" : "High");
+        
+        string optimizationTip = "";
+        if (wageLevel < 3 && medTierCities.Any(c => request.City.Contains(c, StringComparison.OrdinalIgnoreCase)))
+        {
+            optimizationTip = $"Moving to a lower COLA city while maintaining this salary could jump you to Level III (61% individual odds).";
+        }
+        else if (wageLevel < 2)
+        {
+            optimizationTip = $"Your current salary is classified as Level I. Targeting roles with >$95k salary in your current city would triple your primary selection odds.";
+        }
+        else
+        {
+            optimizationTip = "You are in a strong wage bracket. Focus on employer stability and Eb-2/3 initiation timelines early.";
+        }
+
+        return new VisaResult
+        {
+            CumulativeSuccessProbability = Math.Round(cumulativeProb, 4),
             TotalAttempts = attempts,
-            RiskLevel = risk,
-            WageLevel = level,
-            OptimizationTip = tip
-        });
+            RiskLevel = riskLevel,
+            WageLevel = wageLevel,
+            ProbabilityMatrix = matrix,
+            OptimizationTip = optimizationTip
+        };
     }
 
     public Task<LoanResult> CalculateLoanAmortizationAsync(LoanRequest request)

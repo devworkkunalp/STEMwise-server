@@ -39,5 +39,6 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<FxRateCache>().HasIndex(f => new { f.BaseCurrency, f.TargetCurrency }).IsUnique();
         
         Seed.DefaultDataSeed.SeedCountries(modelBuilder);
+        Seed.DefaultDataSeed.SeedEmployers(modelBuilder);
     }
 }
