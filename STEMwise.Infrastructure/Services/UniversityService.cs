@@ -50,4 +50,10 @@ public class UniversityService : IUniversityService
         var university = await _context.Universities.FindAsync(universityId);
         return university?.ScorecardId;
     }
+
+    public async Task<int?> GetSchoolScorecardIdByNameAsync(string name)
+    {
+        var university = await _context.Universities.FirstOrDefaultAsync(u => u.Name.Contains(name));
+        return university?.ScorecardId;
+    }
 }

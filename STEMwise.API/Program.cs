@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using STEMwise.Infrastructure.Data;
 using STEMwise.Application.Interfaces;
 using STEMwise.Infrastructure.ExternalAPIs;
@@ -22,6 +23,7 @@ builder.Services.AddScoped<IUniversityService, UniversityService>();
 builder.Services.AddScoped<ISalaryService, SalaryService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<ICalculationService, CalculationService>();
+builder.Services.AddScoped<IEnrichmentService, EnrichmentService>();
 
 // Add Supabase Auth
 builder.Services.AddSupabaseAuth(builder.Configuration);
@@ -43,6 +45,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
     });

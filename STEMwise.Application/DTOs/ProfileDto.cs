@@ -12,6 +12,9 @@ public class ProfileDto
     public string StemField { get; set; } = string.Empty;
     public DegreeLevel DegreeLevel { get; set; }
     public string? IntakeTerm { get; set; }
+    public string? TargetCity { get; set; }
+    public decimal TargetSalary { get; set; }
+    public string? Specialization { get; set; }
     
     // Core Profile Settings for ROI
     public string? TargetUniversity { get; set; }

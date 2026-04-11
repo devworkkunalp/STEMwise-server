@@ -13,6 +13,21 @@ public class Profile : BaseEntity
     public string StemField { get; set; } = string.Empty;
     public DegreeLevel DegreeLevel { get; set; }
     public string? IntakeTerm { get; set; }
+    
+    // Career & Simulation Targets (TS 03/04/05 Support)
+    public string? TargetCity { get; set; }
+    public decimal TargetSalary { get; set; }
+    public string? Specialization { get; set; }
+    
+    // Core ROI Simulation Baseline
+    public string? TargetUniversity { get; set; }
+    public string? DegreeName { get; set; }
+    public decimal AnnualTuition { get; set; }
+    public decimal AnnualLivingCost { get; set; }
+    public int ProgramDurationYears { get; set; }
+    public decimal LoanAmount { get; set; }
+    public decimal LoanInterestRate { get; set; }
+
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<UserUniversity> UserUniversities { get; set; } = new List<UserUniversity>();

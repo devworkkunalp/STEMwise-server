@@ -21,11 +21,12 @@ public class ProfileService : IProfileService
 
     public async Task<Profile?> GetProfileByUserIdAsync(Guid userId)
     {
+        // T20: Removing AsSplitQuery to prevent connection hanging in pooler
         return await _context.Profiles
             .Include(p => p.UserUniversities)
+                .ThenInclude(uu => uu.University)
             .Include(p => p.LoanConfigs)
             .Include(p => p.VisaConfigs)
-            .AsSplitQuery()
             .FirstOrDefaultAsync(p => p.UserId == userId);
     }
 
@@ -52,6 +53,21 @@ public class ProfileService : IProfileService
         profile.StemField = profileDto.StemField;
         profile.DegreeLevel = profileDto.DegreeLevel;
         profile.IntakeTerm = profileDto.IntakeTerm;
+        
+        // Map Career Targets
+        profile.TargetCity = profileDto.TargetCity;
+        profile.TargetSalary = profileDto.TargetSalary;
+        profile.Specialization = profileDto.Specialization;
+
+        // Map ROI Baseline Details
+        profile.TargetUniversity = profileDto.TargetUniversity;
+        profile.DegreeName = profileDto.DegreeName;
+        profile.AnnualTuition = profileDto.AnnualTuition;
+        profile.AnnualLivingCost = profileDto.AnnualLivingCost;
+        profile.ProgramDurationYears = profileDto.ProgramDurationYears;
+        profile.LoanAmount = profileDto.LoanAmount;
+        profile.LoanInterestRate = profileDto.LoanInterestRate;
+
         profile.UpdatedAt = DateTime.UtcNow;
 
         // Handle University Selections

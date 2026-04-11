@@ -17,4 +17,5 @@ public interface IUniversityService
 {
     Task<IEnumerable<UniversitySearchResult>> SearchUniversitiesAsync(string query, string? countryCode = null);
     Task<int?> GetSchoolScorecardIdAsync(Guid universityId);
+    Task<int?> GetSchoolScorecardIdByNameAsync(string name);
 }

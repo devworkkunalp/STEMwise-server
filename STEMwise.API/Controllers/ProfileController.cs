@@ -30,21 +30,39 @@ public class ProfileController : ControllerBase
     [HttpGet("me")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<Profile>> GetMyProfile()
     {
-        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
+        try
         {
-            return Unauthorized();
-        }
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                ?? User.FindFirst("sub")?.Value; // Fallback to 'sub' claim
 
-        var profile = await _profileService.GetProfileByUserIdAsync(userId);
-        if (profile == null)
+            if (string.IsNullOrEmpty(userIdString))
+            {
+                Console.WriteLine("[AUTH WARNING] No NameIdentifier or sub claim found.");
+                return Unauthorized();
+            }
+
+            if (!Guid.TryParse(userIdString, out var userId))
+            {
+                Console.WriteLine($"[AUTH ERROR] Could not parse userId as Guid: {userIdString}");
+                return BadRequest("Invalid user identity format.");
+            }
+
+            var profile = await _profileService.GetProfileByUserIdAsync(userId);
+            if (profile == null)
+            {
+                return NoContent();
+            }
+
+            return Ok(profile);
+        }
+        catch (Exception ex)
         {
-            return NoContent();
+            Console.WriteLine($"[PROFILE ERROR] Unexpected error in GetMyProfile: {ex.Message}");
+            return StatusCode(500, new { message = "An internal error occurred retrieving your profile.", details = ex.Message });
         }
-
-        return Ok(profile);
     }
 
     /// <summary>

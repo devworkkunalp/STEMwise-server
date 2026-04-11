@@ -33,8 +33,23 @@ public class CalculationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<ROIResult>> CalculateROI([FromBody] ROIRequest request)
     {
-        var result = await _calculationService.CalculateROIAsync(request);
-        return Ok(result);
+        try
+        {
+            if (request == null) return BadRequest("Request body cannot be null.");
+            
+            var result = await _calculationService.CalculateROIAsync(request);
+            return Ok(result);
+        }
+        catch (DivideByZeroException ex)
+        {
+            Console.WriteLine($"[CALC ERROR] Math error: {ex.Message}");
+            return BadRequest("Mathematical error: Total investment cannot be zero for ROI calculation.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CALC ERROR] Unexpected error in CalculateROI: {ex.Message}");
+            return StatusCode(500, new { message = "An error occurred during ROI calculation.", details = ex.Message });
+        }
     }
 
     /// <summary>

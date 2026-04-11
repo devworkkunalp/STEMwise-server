@@ -30,7 +30,17 @@ public static class SupabaseAuthConfig
             options.RequireHttpsMetadata = true;
             
             var jwtSecret = configuration["Supabase:JwtSecret"];
-            var key = Convert.FromBase64String(jwtSecret);
+            byte[] key;
+            try
+            {
+                key = Convert.FromBase64String(jwtSecret);
+                Console.WriteLine("[AUTH INFO] JWT Secret decoded as Base64.");
+            }
+            catch (Exception)
+            {
+                key = Encoding.UTF8.GetBytes(jwtSecret);
+                Console.WriteLine("[AUTH INFO] JWT Secret fallback to UTF8 decoding.");
+            }
 
             options.TokenValidationParameters = new TokenValidationParameters
             {

@@ -18,6 +18,9 @@ public class ROIRequest
     public decimal DurationYears { get; set; }
     public int FinalSalaryBenchmark { get; set; }
     public int CurrentSalary { get; set; } // Opportunity cost
+    public decimal LoanAmount { get; set; }
+    public decimal InterestRate { get; set; }
+    public int RepaymentTerm { get; set; } = 10; // Default to 10 years
     public string HomeCurrency { get; set; } = "INR";
     public string StudyCurrency { get; set; } = "USD";
     public decimal TaxRate { get; set; } = 0.25m; // 25% default
@@ -31,6 +34,8 @@ public class ROIResult
     public decimal NPV { get; set; }
     public int BreakEvenYear { get; set; }
     public decimal OpportunityCost { get; set; }
+    public int ROIScore { get; set; } // 0-100 normalized
+    public decimal IncrementalEarnings { get; set; } // Annual Delta
     public string Currency { get; set; } = "INR";
     public List<AnnualCashFlow> CashFlows { get; set; } = new();
 }
@@ -44,8 +49,10 @@ public class AnnualCashFlow
 
 public class VisaRequest
 {
-    public decimal BaseSelectionRate { get; set; } // Current H-1B lottery rate
-    public bool IsStem { get; set; } // If STEM, attempts = 3, else 1
+    public decimal Salary { get; set; }
+    public string City { get; set; } = string.Empty;
+    public string FieldOfStudy { get; set; } = string.Empty;
+    public bool IsStem { get; set; } // Auto-attempts calculation
 }
 
 public class VisaResult
@@ -53,6 +60,8 @@ public class VisaResult
     public decimal CumulativeSuccessProbability { get; set; }
     public int TotalAttempts { get; set; }
     public string RiskLevel { get; set; } = string.Empty;
+    public int WageLevel { get; set; } // I-IV categorization
+    public string OptimizationTip { get; set; } = string.Empty;
 }
 
 public class LoanRequest
