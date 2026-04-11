@@ -7,6 +7,7 @@ namespace STEMwise.Application.Interfaces;
 
 public interface IProfileService
 {
+    Task<Profile?> GetProfileByIdAsync(Guid id);
     Task<Profile?> GetProfileByUserIdAsync(Guid userId);
     Task<Profile> UpsertProfileAsync(Guid userId, ProfileDto profileDto);
     Task<bool> DeleteProfileAsync(Guid userId);

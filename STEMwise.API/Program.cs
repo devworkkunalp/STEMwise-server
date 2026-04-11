@@ -24,6 +24,7 @@ builder.Services.AddScoped<ISalaryService, SalaryService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<ICalculationService, CalculationService>();
 builder.Services.AddScoped<IEnrichmentService, EnrichmentService>();
+builder.Services.AddScoped<IScenarioService, ScenarioService>();
 
 // Add Supabase Auth
 builder.Services.AddSupabaseAuth(builder.Configuration);

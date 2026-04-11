@@ -6,6 +6,7 @@ namespace STEMwise.Application.DTOs;
 
 public class ProfileDto
 {
+    public Guid Id { get; set; }
     public string? DisplayName { get; set; }
     public string Nationality { get; set; } = string.Empty;
     public string HomeCurrency { get; set; } = string.Empty;

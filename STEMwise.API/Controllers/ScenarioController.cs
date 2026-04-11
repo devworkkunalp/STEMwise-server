@@ -1,71 +1,72 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using STEMwise.Domain.Entities;
-using STEMwise.Infrastructure.Data;
+using STEMwise.Application.Interfaces;
+using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace STEMwise.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
-[Produces("application/json")]
 public class ScenarioController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IScenarioService _scenarioService;
+    private readonly IProfileService _profileService;
 
-    public ScenarioController(AppDbContext context)
+    public ScenarioController(IScenarioService scenarioService, IProfileService profileService)
     {
-        _context = context;
+        _scenarioService = scenarioService;
+        _profileService = profileService;
     }
 
-    /// <summary>
-    /// Saves a modeled "What-If" scenario for the user's profile.
-    /// </summary>
-    [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    public async Task<ActionResult<SavedScenario>> SaveScenario([FromBody] SavedScenario scenario)
+    [HttpPost("model")]
+    public async Task<IActionResult> ModelScenario([FromBody] ScenarioModelRequest request)
     {
-        if (scenario == null) return BadRequest();
-        
-        scenario.Id = Guid.NewGuid();
-        _context.SavedScenarios.Add(scenario);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetScenarios), new { profileId = scenario.ProfileId }, scenario);
+        Console.WriteLine($"[SCENARIO] Modeling request received for Profile: {request.ProfileId}, Type: {request.ScenarioType}");
+        try
+        {
+            var result = await _scenarioService.ModelScenarioAsync(request);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SCENARIO ERROR] {ex.Message} \n {ex.StackTrace}");
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
-    /// <summary>
-    /// Retrieves all saved scenarios for a specific profile.
-    /// </summary>
-    [HttpGet("{profileId}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<SavedScenario>>> GetScenarios(Guid profileId)
+    [HttpPost("save")]
+    public async Task<IActionResult> SaveScenario([FromBody] ScenarioModelResult result)
     {
-        var scenarios = await _context.SavedScenarios
-            .Where(s => s.ProfileId == profileId)
-            .OrderByDescending(s => s.Id) // Roughly chronological if no createdAt
-            .ToListAsync();
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId)) return Unauthorized();
 
-        return Ok(scenarios);
+        var profile = await _profileService.GetProfileByUserIdAsync(userId);
+        if (profile == null) return NotFound("Profile not found");
+
+        try
+        {
+            var success = await _scenarioService.SaveScenarioAsync(profile.Id, result);
+            return Ok(new { success });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
-    /// <summary>
-    /// Deletes a saved scenario.
-    /// </summary>
-    [HttpDelete("{id}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> DeleteScenario(Guid id)
+    [HttpGet("history")]
+    public async Task<IActionResult> GetHistory()
     {
-        var scenario = await _context.SavedScenarios.FindAsync(id);
-        if (scenario == null) return NotFound();
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId)) return Unauthorized();
 
-        _context.SavedScenarios.Remove(scenario);
-        await _context.SaveChangesAsync();
+        var profile = await _profileService.GetProfileByUserIdAsync(userId);
+        if (profile == null) return NotFound("Profile not found");
 
-        return NoContent();
+        var history = await _scenarioService.GetScenarioHistoryAsync(profile.Id);
+        return Ok(history);
     }
 }

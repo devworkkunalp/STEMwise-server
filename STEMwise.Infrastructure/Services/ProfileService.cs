@@ -19,6 +19,16 @@ public class ProfileService : IProfileService
         _context = context;
     }
 
+    public async Task<Profile?> GetProfileByIdAsync(Guid id)
+    {
+        return await _context.Profiles
+            .Include(p => p.UserUniversities)
+                .ThenInclude(uu => uu.University)
+            .Include(p => p.LoanConfigs)
+            .Include(p => p.VisaConfigs)
+            .FirstOrDefaultAsync(p => p.Id == id);
+    }
+
     public async Task<Profile?> GetProfileByUserIdAsync(Guid userId)
     {
         // T20: Removing AsSplitQuery to prevent connection hanging in pooler

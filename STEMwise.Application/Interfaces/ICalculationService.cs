@@ -80,6 +80,8 @@ public class LoanRequest
     public decimal AnnualInterestRate { get; set; }
     public int TenureYears { get; set; }
     public int GracePeriodMonths { get; set; }
+    public bool IsInterestCapitalized { get; set; }
+    public decimal TotalEstimatedCost { get; set; } // For Gap Detection
 }
 
 public class LoanResult
@@ -87,4 +89,16 @@ public class LoanResult
     public decimal MonthlyEMI { get; set; }
     public decimal TotalInterestPayable { get; set; }
     public decimal TotalAmountPayable { get; set; }
+    public decimal TotalInterestAtRepayment { get; set; } // Accrued during grace
+    public decimal FundingGap { get; set; }
+    public bool IsGapPresent { get; set; }
+    public List<AmortizationMonth> AmortizationSchedule { get; set; } = new();
+}
+
+public class AmortizationMonth
+{
+    public int Month { get; set; }
+    public decimal PrincipalPaid { get; set; }
+    public decimal InterestPaid { get; set; }
+    public decimal RemainingBalance { get; set; }
 }

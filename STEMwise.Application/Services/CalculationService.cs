@@ -94,7 +94,16 @@ public class CalculationService : ICalculationService
 
         result.NetEarnings10Yr = Math.Round(cumulativeEarnings, 2);
         result.NPV = Math.Round(npv, 2);
-        result.ROIPercentage = Math.Round((cumulativeEarnings - result.TotalInvestment) / result.TotalInvestment * 100, 2);
+        
+        if (result.TotalInvestment != 0)
+        {
+            result.ROIPercentage = Math.Round((cumulativeEarnings - result.TotalInvestment) / result.TotalInvestment * 100, 2);
+        }
+        else
+        {
+            result.ROIPercentage = 0;
+        }
+
         result.BreakEvenYear = breakEvenYear > 0 ? breakEvenYear : 11; // 11 means not reached in 10 yrs
         result.Currency = request.HomeCurrency;
 
@@ -190,24 +199,67 @@ public class CalculationService : ICalculationService
         double principal = (double)request.Principal;
         double annualRate = (double)request.AnnualInterestRate / 100.0;
         double monthlyRate = annualRate / 12.0;
-
-        // 1. Initial interest calculation during grace period (Simple interest)
-        // Assume interest is accrued but not compounded during grace period
-        double gracePeriodInterest = principal * (annualRate * (request.GracePeriodMonths / 12.0));
-        
-        // 2. Amortization after grace period
+        int graceMonths = request.GracePeriodMonths;
         int repaymentMonths = request.TenureYears * 12;
+
+        // 1. Interest during Grace Period (Simple Interest)
+        double totalGraceInterest = principal * (annualRate * (graceMonths / 12.0));
         
-        double emi = principal * (monthlyRate * Math.Pow(1 + monthlyRate, repaymentMonths)) / (Math.Pow(1 + monthlyRate, repaymentMonths) - 1);
+        // 2. Adjust Principal if Capitalized
+        double principalAtRepayment = request.IsInterestCapitalized ? (principal + totalGraceInterest) : principal;
         
-        decimal totalAmortized = (decimal)(emi * repaymentMonths);
-        decimal totalInterest = (decimal)gracePeriodInterest + (totalAmortized - request.Principal);
+        // 3. Calculate EMI (Standard Amortization Formula)
+        double emi = 0;
+        if (repaymentMonths > 0)
+        {
+            if (monthlyRate > 0)
+            {
+                double factor = Math.Pow(1 + monthlyRate, repaymentMonths);
+                emi = principalAtRepayment * (monthlyRate * factor) / (factor - 1);
+            }
+            else
+            {
+                emi = principalAtRepayment / repaymentMonths;
+            }
+        }
+
+        // 4. Generate Schedule
+        var schedule = new List<AmortizationMonth>();
+        double currentBalance = principalAtRepayment;
+        double totalInterestPaidDuringRepayment = 0;
+
+        for (int m = 1; m <= repaymentMonths; m++)
+        {
+            double interestM = currentBalance * monthlyRate;
+            double principalM = emi - interestM;
+            currentBalance = Math.Max(0, currentBalance - principalM);
+            totalInterestPaidDuringRepayment += interestM;
+
+            // Sample every 6 months to keep DTO size manageable
+            if (m % 6 == 0 || m == 1 || m == repaymentMonths)
+            {
+                schedule.Add(new AmortizationMonth
+                {
+                    Month = m,
+                    PrincipalPaid = (decimal)Math.Round(principalM, 2),
+                    InterestPaid = (decimal)Math.Round(interestM, 2),
+                    RemainingBalance = (decimal)Math.Round(currentBalance, 2)
+                });
+            }
+        }
+
+        // 5. Gap Detection
+        decimal gap = Math.Max(0, request.TotalEstimatedCost - request.Principal);
 
         return Task.FromResult(new LoanResult
         {
             MonthlyEMI = Math.Round((decimal)emi, 2),
-            TotalAmountPayable = Math.Round((decimal)principal + totalInterest, 2),
-            TotalInterestPayable = Math.Round(totalInterest, 2)
+            TotalInterestAtRepayment = (decimal)Math.Round(totalGraceInterest, 2),
+            TotalInterestPayable = (decimal)Math.Round(totalInterestPaidDuringRepayment + (request.IsInterestCapitalized ? totalGraceInterest : totalGraceInterest), 2),
+            TotalAmountPayable = (decimal)Math.Round(principal + totalInterestPaidDuringRepayment + totalGraceInterest, 2),
+            FundingGap = gap,
+            IsGapPresent = gap > 10,
+            AmortizationSchedule = schedule
         });
     }
 
