@@ -20,5 +20,5 @@ public class ROIReport : BaseEntity
     public decimal EarningsPremiumPct { get; set; }
     public decimal DebtToIncomeRatio { get; set; }
     public string[] OptimizationTips { get; set; } = Array.Empty<string>();
-    public JsonDocument? InputSnapshot { get; set; }
+    public string? InputSnapshot { get; set; }
 }

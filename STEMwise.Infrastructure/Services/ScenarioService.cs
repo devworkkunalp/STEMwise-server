@@ -121,9 +121,11 @@ public class ScenarioService : IScenarioService
             .OrderByDescending(s => s.CreatedAt)
             .Select(s => new ScenarioHistoryItem
             {
-                Date = s.CreatedAt,
+                Id = s.Id,
+                CreatedAt = s.CreatedAt,
                 ScenarioType = s.ScenarioType,
-                Impact = s.ImpactDelta
+                ImpactScore = s.ImpactDelta,
+                AdjustedRoi = s.AdjustedRoi
             })
             .ToListAsync();
     }

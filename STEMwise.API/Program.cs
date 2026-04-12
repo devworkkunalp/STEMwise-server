@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using STEMwise.Infrastructure.Data;
@@ -10,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add Database
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add External API Clients
 builder.Services.AddHttpClient<ICollegeScorecardClient, CollegeScorecardClient>();
@@ -26,8 +28,10 @@ builder.Services.AddScoped<ICalculationService, CalculationService>();
 builder.Services.AddScoped<IEnrichmentService, EnrichmentService>();
 builder.Services.AddScoped<IScenarioService, ScenarioService>();
 
-// Add Supabase Auth
-builder.Services.AddSupabaseAuth(builder.Configuration);
+// Add ASP.NET Core Identity (Native Azure SQL Auth)
+builder.Services.AddAuthorization();
+builder.Services.AddIdentityApiEndpoints<IdentityUser>()
+    .AddEntityFrameworkStores<AppDbContext>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -65,7 +69,7 @@ builder.Services.AddSwaggerGen(c =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "Enter your Supabase JWT as: Bearer [token]"
+        Description = "Enter your Microsoft Entra ID CIAM JWT as: Bearer [token]"
     });
 
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
@@ -114,6 +118,7 @@ app.UseAuthorization();
 
 
 
+app.MapGroup("/api").MapIdentityApi<IdentityUser>();
 app.MapControllers();
 
 app.Run();

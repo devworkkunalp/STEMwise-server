@@ -45,7 +45,9 @@ public class PivotPathway
 
 public class ScenarioHistoryItem
 {
-    public DateTime Date { get; set; }
+    public Guid Id { get; set; }
+    public DateTime CreatedAt { get; set; }
     public string ScenarioType { get; set; } = string.Empty;
-    public int Impact { get; set; }
+    public int ImpactScore { get; set; }
+    public int AdjustedRoi { get; set; }
 }
