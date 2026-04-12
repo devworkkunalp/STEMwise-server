@@ -92,8 +92,11 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// 1. Move CORS and Traffic Logger to the absolute top
+// 1. Force CORS to be absolute first (even handles preflight on errors)
 app.UseCors("AllowFrontend");
+
+// 2. Diagnostic: Show detailed errors in production to find the 500 cause
+app.UseDeveloperExceptionPage();
 
 app.Use(async (context, next) =>
 {
@@ -101,14 +104,27 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// 2. Health check endpoint to verify app is alive
-app.MapGet("/", () => Results.Ok("STEMwise API is running."));
+// 3. Auto-Migrate Database on startup
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        context.Database.Migrate();
+        Console.WriteLine("[DB] Migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[DB ERROR] Could not apply migrations: {ex.Message}");
+    }
+}
 
-// 3. Enable Swagger in ALL environments (Diagnostic Mode)
+// 4. Health check and Swagger
+app.MapGet("/", () => Results.Ok("STEMwise API is running with Migrations enabled."));
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
