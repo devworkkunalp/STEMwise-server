@@ -37,7 +37,9 @@ builder.Services.AddIdentityApiEndpoints<IdentityUser>()
 builder.Services.AddCors(options =>
 {
     var allowedOrigins = (builder.Configuration["ALLOWED_ORIGIN"] ?? "http://localhost:5173")
-        .Split(',', StringSplitOptions.RemoveEmptyEntries);
+        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+        .Select(o => o.Trim())
+        .ToArray();
         
     options.AddPolicy("AllowFrontend", policy =>
     {
