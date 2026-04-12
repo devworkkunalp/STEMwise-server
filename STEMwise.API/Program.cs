@@ -92,29 +92,27 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Global Traffic Logger
+// 1. Move CORS and Traffic Logger to the absolute top
+app.UseCors("AllowFrontend");
+
 app.Use(async (context, next) =>
 {
     Console.WriteLine($"[TRAFFIC] {context.Request.Method} {context.Request.Path}");
     await next();
 });
 
+// 2. Health check endpoint to verify app is alive
+app.MapGet("/", () => Results.Ok("STEMwise API is running."));
+
+// 3. Enable Swagger in ALL environments (Diagnostic Mode)
+app.UseSwagger();
+app.UseSwaggerUI();
+
 // Configure the HTTP request pipeline.
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
-
-
-app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
