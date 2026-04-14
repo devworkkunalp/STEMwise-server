@@ -113,7 +113,8 @@ public class CalculationService : ICalculationService
         decimal playbackScore = Math.Max(0, 100 - ((decimal)(result.BreakEvenYear - 2) * 10));
         decimal roiPercentScore = Math.Min(100, result.ROIPercentage / 3.0m); // 300% ROI = 100 score
         
-        result.ROIScore = (int)Math.Min(100, Math.Max(5, (playbackScore * 0.6m) + (roiPercentScore * 0.4m)));
+        // Enforce 5-99 range as requested in QA plan (ROI-03)
+        result.ROIScore = (int)Math.Min(99, Math.Max(5, (playbackScore * 0.6m) + (roiPercentScore * 0.4m)));
 
         return result;
     }

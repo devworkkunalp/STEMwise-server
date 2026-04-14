@@ -53,45 +53,52 @@ public class ScenarioService : IScenarioService
         switch (request.ScenarioType)
         {
             case "RECESSION":
-                // 20% Salary Cut + 6 Months Job Gap (Opportunity Cost of zero earnings)
+                // 20% Salary Cut + 6 Months Job Gap
                 var recessionRequest = CloneRequest(baseRequest);
                 recessionRequest.FinalSalaryBenchmark = (int)(baseRequest.FinalSalaryBenchmark * 0.8);
-                // We simulate job gap by adding 0.5 to duration (unearned time) or just deducting 6 months earnings
                 var recessionResult = await _calculationService.CalculateROIAsync(recessionRequest);
-                // Manual correction for the 6-month gap impact on cumulative earnings
-                result.AdjustedRoi = recessionResult.ROIPercentage - 8; // Approximation for the job gap
+                result.AdjustedRoi = Math.Max(5, recessionResult.ROIScore - 8); 
                 result.Metrics.Add(new ScenarioMetric { Label = "Target Salary", BaseValue = $"${baseRequest.FinalSalaryBenchmark/1000}k", AdjustedValue = $"${recessionRequest.FinalSalaryBenchmark/1000}k", IsNegative = true });
                 result.Metrics.Add(new ScenarioMetric { Label = "Job Search", BaseValue = "3 Months", AdjustedValue = "9 Months", IsNegative = true });
                 break;
 
             case "H1B_DENIED":
-                // 3 years US salary -> 7 years Home salary
-                int homeSalaryLevel = GetHomeSalaryBenchmark(profile.Nationality);
-                var deniedResult = Math.Max(0, baseResult.ROIPercentage - 40); // Standard heavy impact
-                result.AdjustedRoi = deniedResult;
+                // Returning home after OPT
+                result.AdjustedRoi = Math.Max(5, baseResult.ROIScore - 42); 
                 result.Metrics.Add(new ScenarioMetric { Label = "Years in US", BaseValue = "10 Years", AdjustedValue = "3 Years (OPT)", IsNegative = true });
-                result.Metrics.Add(new ScenarioMetric { Label = "Year 4-10 Earnings", BaseValue = $"${baseRequest.FinalSalaryBenchmark/1000}k/yr", AdjustedValue = $"₹{homeSalaryLevel/100000} LPA", IsNegative = true });
+                result.Metrics.Add(new ScenarioMetric { Label = "Year 4-10 Earnings", BaseValue = "USD Full", AdjustedValue = "Local LPP", IsNegative = true });
                 break;
 
-            case "CURRENCY_CRASH":
-                // 20% FX spike (assuming INR or similar)
-                result.AdjustedRoi = Math.Max(0, baseResult.ROIPercentage - 12);
-                result.Metrics.Add(new ScenarioMetric { Label = "Exchange Rate", BaseValue = "₹83.5/$", AdjustedValue = "₹100.2/$", IsNegative = true });
-                result.Metrics.Add(new ScenarioMetric { Label = "Loan Burden", BaseValue = "Standard", AdjustedValue = "+20% Cost", IsNegative = true });
+            case "STUDY_DELAY":
+                // Extra year of cost + 1 year delayed income
+                var delayRequest = CloneRequest(baseRequest);
+                delayRequest.DurationYears += 1;
+                var delayResult = await _calculationService.CalculateROIAsync(delayRequest);
+                result.AdjustedRoi = Math.Max(5, delayResult.ROIScore - 12);
+                result.Metrics.Add(new ScenarioMetric { Label = "Program Duration", BaseValue = $"{baseRequest.DurationYears} Yrs", AdjustedValue = $"{delayRequest.DurationYears} Yrs", IsNegative = true });
+                result.Metrics.Add(new ScenarioMetric { Label = "Total Investment", BaseValue = "Standard", AdjustedValue = "+$65k Est", IsNegative = true });
+                break;
+
+            case "JOB_GAP":
+                // 3 month unemployment gap at start of OPT
+                result.AdjustedRoi = Math.Max(5, baseResult.ROIScore - 15);
+                result.Metrics.Add(new ScenarioMetric { Label = "OPT Start Date", BaseValue = "Month 1", AdjustedValue = "Month 4", IsNegative = true });
+                result.Metrics.Add(new ScenarioMetric { Label = "Initial Savings", BaseValue = "$25k (1st year)", AdjustedValue = "$18k", IsNegative = true });
                 break;
 
             case "LEVEL_3_PROMO":
-                // Boost for Level 3 prioritization
-                result.AdjustedRoi = Math.Min(100, baseResult.ROIPercentage + 15);
+                // Upside scenario
+                result.AdjustedRoi = Math.Min(99, baseResult.ROIScore + 15);
                 result.Metrics.Add(new ScenarioMetric { Label = "Visa Odds", BaseValue = "48%", AdjustedValue = "92% (Priority)", IsNegative = false });
                 result.Metrics.Add(new ScenarioMetric { Label = "Path Stability", BaseValue = "Moderate", AdjustedValue = "High", IsNegative = false });
                 break;
                 
             default:
-                result.AdjustedRoi = baseResult.ROIPercentage;
+                result.AdjustedRoi = baseResult.ROIScore;
                 break;
         }
 
+        result.BaseRoi = baseResult.ROIScore; // Use score instead of percentage
         result.ImpactScore = result.AdjustedRoi - result.BaseRoi;
         result.RecommendedPivots = GetPivots(request.ScenarioType, profile.Nationality);
 
