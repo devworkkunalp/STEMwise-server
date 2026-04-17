@@ -10,9 +10,17 @@ using STEMwise.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add Database
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), sqlOptions => {
+        sqlOptions.EnableRetryOnFailure();
+    }));
+
+builder.Services.AddDbContext<ResearchDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("OrchestratorConnection"), sqlOptions => {
+        sqlOptions.EnableRetryOnFailure();
+    }));
+
+builder.Services.AddMemoryCache();
 
 // Add External API Clients
 builder.Services.AddHttpClient<ICollegeScorecardClient, CollegeScorecardClient>();
@@ -27,6 +35,7 @@ builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<ICalculationService, CalculationService>();
 builder.Services.AddScoped<IEnrichmentService, EnrichmentService>();
 builder.Services.AddScoped<IScenarioService, ScenarioService>();
+builder.Services.AddScoped<IResearchService, ResearchService>();
 
 // Add ASP.NET Core Identity (Native Azure SQL Auth)
 builder.Services.AddAuthorization();
@@ -95,8 +104,17 @@ var app = builder.Build();
 // 1. Force CORS to be absolute first (even handles preflight on errors)
 app.UseCors("AllowFrontend");
 
-// 2. Diagnostic: Show detailed errors in production to find the 500 cause
-app.UseDeveloperExceptionPage();
+// 2. Environment-specific error handling
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/Error");
+    // Standard HSTS for production
+    app.UseHsts();
+}
 
 app.Use(async (context, next) =>
 {
