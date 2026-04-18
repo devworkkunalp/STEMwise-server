@@ -29,10 +29,12 @@ public class ROIRequest
 public class ROIResult
 {
     public decimal TotalInvestment { get; set; }
+    public decimal TotalDirectCost { get; set; } // Tuition + Rent + Misc
+    public decimal LoanInterest { get; set; } // Estimated total interest
     public decimal NetEarnings10Yr { get; set; }
     public decimal ROIPercentage { get; set; }
     public decimal NPV { get; set; }
-    public int BreakEvenYear { get; set; }
+    public decimal BreakEvenYear { get; set; }
     public decimal OpportunityCost { get; set; }
     public int ROIScore { get; set; } // 0-100 normalized
     public decimal IncrementalEarnings { get; set; } // Annual Delta

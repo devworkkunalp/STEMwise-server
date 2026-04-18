@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using STEMwise.Application.Interfaces;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace STEMwise.API.Controllers;
 
-[Authorize]
+[AllowAnonymous]
 [ApiController]
 [Route("api/[controller]")]
 public class ResearchController : ControllerBase
@@ -57,5 +59,19 @@ public class ResearchController : ControllerBase
         };
         
         return Ok(summary);
+    }
+
+    [HttpGet("global")]
+    public async Task<IActionResult> GetGlobalRankings()
+    {
+        var data = await _researchService.GetGlobalRankingsAsync();
+        return Ok(data);
+    }
+
+    [HttpGet("global-alternatives")]
+    public async Task<IActionResult> GetGlobalSectorAlternatives([FromQuery] string? specialization)
+    {
+        var data = await _researchService.GetGlobalSectorBenchmarksAsync(specialization);
+        return Ok(data);
     }
 }

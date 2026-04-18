@@ -10,4 +10,6 @@ public interface IResearchService
     Task<IEnumerable<RegionalRent>> GetRegionalRentsAsync();
     Task<IEnumerable<VisaBenchmark>> GetVisaBenchmarksAsync();
     Task<IEnumerable<LaborBenchmark>> GetLaborBenchmarksAsync();
+    Task<IEnumerable<GlobalUniversityMetric>> GetGlobalRankingsAsync();
+    Task<IEnumerable<GlobalSectorBenchmark>> GetGlobalSectorBenchmarksAsync(string? specialization);
 }

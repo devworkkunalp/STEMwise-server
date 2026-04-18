@@ -92,4 +92,61 @@ public class ResearchService : IResearchService
 
         return labor ?? new List<LaborBenchmark>();
     }
+
+    public async Task<IEnumerable<GlobalUniversityMetric>> GetGlobalRankingsAsync()
+    {
+        var cacheKey = $"{CacheKeyPrefix}Global";
+
+        if (!_cache.TryGetValue(cacheKey, out List<GlobalUniversityMetric>? globalData))
+        {
+            globalData = await _context.GlobalUniversityMetrics
+                .OrderByDescending(g => g.RoiScore)
+                .ToListAsync();
+
+            var cacheOptions = new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromHours(1));
+
+            _cache.Set(cacheKey, globalData, cacheOptions);
+        }
+
+        return globalData ?? new List<GlobalUniversityMetric>();
+    }
+
+    public async Task<IEnumerable<GlobalSectorBenchmark>> GetGlobalSectorBenchmarksAsync(string? specialization)
+    {
+        // Normalize specialization for robust mapping (Matches exact strings in GlobalSectorBenchmarks table)
+        var normalizedSpec = specialization?.ToLower() switch {
+            "cs" => "Computer Science / AI",
+            "computer science / ai" => "Computer Science / AI",
+            "cyber" => "Cybersecurity",
+            "cybersecurity" => "Cybersecurity",
+            "data" => "Data Science / Analytics",
+            "data science / analytics" => "Data Science / Analytics",
+            "electrical" => "Electrical Engineering",
+            "biomedical" => "Biomedical Sciences",
+            "mechanical" => "Mechanical Engineering",
+            _ => specialization
+        };
+
+        var cacheKey = $"{CacheKeyPrefix}GlobalSectors_{normalizedSpec ?? "All"}";
+
+        if (!_cache.TryGetValue(cacheKey, out List<GlobalSectorBenchmark>? globalSectors))
+        {
+            var query = _context.GlobalSectorBenchmarks.AsQueryable();
+            
+            if (!string.IsNullOrEmpty(normalizedSpec))
+            {
+                query = query.Where(g => g.Specialization == normalizedSpec);
+            }
+
+            globalSectors = await query.ToListAsync();
+
+            var cacheOptions = new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromHours(1));
+
+            _cache.Set(cacheKey, globalSectors, cacheOptions);
+        }
+
+        return globalSectors ?? new List<GlobalSectorBenchmark>();
+    }
 }

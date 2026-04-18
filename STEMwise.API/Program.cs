@@ -122,15 +122,19 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// 3. Auto-Migrate Database on startup
+// 3. Auto-Migrate Databases on startup
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
-        var context = services.GetRequiredService<AppDbContext>();
-        context.Database.Migrate();
-        Console.WriteLine("[DB] Migrations applied successfully.");
+        var appDb = services.GetRequiredService<AppDbContext>();
+        appDb.Database.Migrate();
+        
+        var researchDb = services.GetRequiredService<ResearchDbContext>();
+        researchDb.Database.Migrate();
+        
+        Console.WriteLine("[DB] All migrations applied successfully.");
     }
     catch (Exception ex)
     {

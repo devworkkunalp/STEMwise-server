@@ -47,6 +47,8 @@ public class CalculationService : ICalculationService
         // Calculate estimated loan interest (Simplified for ROI purposes: Loan * Rate * Term * 0.55 factor)
         decimal loanInterest = (request.LoanAmount * exchangeRate) * (request.InterestRate / 100) * request.RepaymentTerm * 0.55m;
         
+        result.TotalDirectCost = Math.Round(totalDirectCost, 2);
+        result.LoanInterest = Math.Round(loanInterest, 2);
         result.TotalInvestment = Math.Round(totalDirectCost + opportunityCost + loanInterest, 2);
         result.OpportunityCost = Math.Round(opportunityCost, 2);
 
@@ -79,9 +81,12 @@ public class CalculationService : ICalculationService
             // NPV calculation: Net Cash Flow / (1+r)^t
             npv += yearEarnings / (decimal)Math.Pow(1 + (double)DiscountRate, year);
 
-            if (breakEvenYear == -1 && cumulativeEarnings >= result.TotalInvestment)
+            if (result.BreakEvenYear == 0 && cumulativeEarnings >= result.TotalInvestment)
             {
-                breakEvenYear = year;
+                // Interpolate fractional year (e.g., 3.4 years)
+                decimal previousCumulative = cumulativeEarnings - yearEarnings;
+                decimal effortInThisYear = result.TotalInvestment - previousCumulative;
+                result.BreakEvenYear = (year - 1) + (effortInThisYear / yearEarnings);
             }
 
             result.CashFlows.Add(new AnnualCashFlow 
@@ -104,13 +109,13 @@ public class CalculationService : ICalculationService
             result.ROIPercentage = 0;
         }
 
-        result.BreakEvenYear = breakEvenYear > 0 ? breakEvenYear : 11; // 11 means not reached in 10 yrs
+        result.BreakEvenYear = result.BreakEvenYear > 0 ? Math.Round(result.BreakEvenYear, 2) : 11; // 11 means not reached in 10 yrs
         result.Currency = request.HomeCurrency;
 
         // 4. ROI Score Calculation (0-100 normalized)
         // Logic: Payback <= 2 yrs is 100, Payback >= 10 yrs is 20.
         // We also factor in the 10yr ROI percentage.
-        decimal playbackScore = Math.Max(0, 100 - ((decimal)(result.BreakEvenYear - 2) * 10));
+        decimal playbackScore = Math.Max(0, 100 - ((result.BreakEvenYear - 2m) * 10m));
         decimal roiPercentScore = Math.Min(100, result.ROIPercentage / 3.0m); // 300% ROI = 100 score
         
         // Enforce 5-99 range as requested in QA plan (ROI-03)
@@ -154,6 +159,7 @@ public class CalculationService : ICalculationService
             { 4, 0.78m }
         };
 
+        decimal modeledSalary = Math.Max(60000, request.Salary);
         decimal baseRate = levels.GetValueOrDefault(wageLevel, 0.15m);
         int attempts = request.IsStem ? 3 : 1;
         decimal cumulativeProb = 1 - (decimal)Math.Pow((double)(1 - baseRate), attempts);

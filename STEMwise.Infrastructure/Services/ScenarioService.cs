@@ -111,9 +111,9 @@ public class ScenarioService : IScenarioService
         {
             ProfileId = profileId,
             ScenarioType = result.ScenarioType,
-            BaseRoi = (int)result.BaseRoi,
-            AdjustedRoi = (int)result.AdjustedRoi,
-            ImpactDelta = (int)result.ImpactScore,
+            BaseRoi = (int)Math.Round(result.BaseRoi),
+            AdjustedRoi = (int)Math.Round(result.AdjustedRoi),
+            ImpactDelta = (int)Math.Round(result.ImpactScore),
             CreatedAt = DateTime.UtcNow
         };
 
