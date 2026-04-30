@@ -1,6 +1,4 @@
 <Solution>
   <Project Path="STEMwise.API/STEMwise.API.csproj" />
-  <Project Path="STEMwise.Application/STEMwise.Application.csproj" />
-  <Project Path="STEMwise.Domain/STEMwise.Domain.csproj" />
   <Project Path="STEMwise.Infrastructure/STEMwise.Infrastructure.csproj" />
 </Solution>

@@ -1,12 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 using STEMwise.Infrastructure.Data;
-using STEMwise.Application.Interfaces;
-using STEMwise.Infrastructure.ExternalAPIs;
-using STEMwise.Infrastructure.Services;
-using STEMwise.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,28 +9,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), sqlOptions => {
         sqlOptions.EnableRetryOnFailure();
     }));
-
-builder.Services.AddDbContext<ResearchDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("OrchestratorConnection"), sqlOptions => {
-        sqlOptions.EnableRetryOnFailure();
-    }));
-
-builder.Services.AddMemoryCache();
-
-// Add External API Clients
-builder.Services.AddHttpClient<ICollegeScorecardClient, CollegeScorecardClient>();
-builder.Services.AddHttpClient<IFrankfurterClient, FrankfurterClient>();
-builder.Services.AddHttpClient<IBlsOewsClient, BlsOewsClient>();
-
-// Add Domain Services
-builder.Services.AddScoped<ICountryService, CountryService>();
-builder.Services.AddScoped<IUniversityService, UniversityService>();
-builder.Services.AddScoped<ISalaryService, SalaryService>();
-builder.Services.AddScoped<IProfileService, ProfileService>();
-builder.Services.AddScoped<ICalculationService, CalculationService>();
-builder.Services.AddScoped<IEnrichmentService, EnrichmentService>();
-builder.Services.AddScoped<IScenarioService, ScenarioService>();
-builder.Services.AddScoped<IResearchService, ResearchService>();
 
 // Add ASP.NET Core Identity (Native Azure SQL Auth)
 builder.Services.AddAuthorization();
@@ -59,52 +32,19 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add services to the container.
+builder.Services.AddControllers();
 
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
-    });
-
-// Swagger/OpenAPI with Security
+// Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "STEMwise API", Version = "v1" });
-
-    // Add Security Definition for Bearer token
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
-        BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "Enter your Microsoft Entra ID CIAM JWT as: Bearer [token]"
-    });
-
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference { Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer" }
-            },
-            new string[] {}
-        }
-    });
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "STEMwise Basic Auth API", Version = "v1" });
 });
-
 
 var app = builder.Build();
 
-// 1. Force CORS to be absolute first (even handles preflight on errors)
 app.UseCors("AllowFrontend");
 
-// 2. Environment-specific error handling
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -112,17 +52,9 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error");
-    // Standard HSTS for production
     app.UseHsts();
 }
 
-app.Use(async (context, next) =>
-{
-    Console.WriteLine($"[TRAFFIC] {context.Request.Method} {context.Request.Path}");
-    await next();
-});
-
-// 3. Auto-Migrate Databases on startup
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -130,11 +62,7 @@ using (var scope = app.Services.CreateScope())
     {
         var appDb = services.GetRequiredService<AppDbContext>();
         appDb.Database.Migrate();
-        
-        var researchDb = services.GetRequiredService<ResearchDbContext>();
-        researchDb.Database.Migrate();
-        
-        Console.WriteLine("[DB] All migrations applied successfully.");
+        Console.WriteLine("[DB] Identity Migrations applied successfully.");
     }
     catch (Exception ex)
     {
@@ -142,8 +70,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// 4. Health check and Swagger
-app.MapGet("/", () => Results.Ok("STEMwise API is running with Migrations enabled."));
+app.MapGet("/", () => Results.Ok("STEMwise Identity API is running."));
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -154,10 +81,6 @@ if (!app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-
-
-
 
 app.MapGroup("/api").MapIdentityApi<IdentityUser>();
 app.MapControllers();
